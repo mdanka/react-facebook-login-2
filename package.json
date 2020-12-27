@@ -1,9 +1,9 @@
 {
-  "name": "component-library-starter",
+  "name": "react-facebook-login-2",
   "version": "1.0.0",
   "main": "./build/index.js",
   "module": "./build/index.es.js",
-  "author": "Dennis Schneider",
+  "author": "Miklós Danka",
   "license": "MIT",
   "dependencies": {},
   "peerDependencies": {
