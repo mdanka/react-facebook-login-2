@@ -77,10 +77,6 @@ const DEFAULT_PROPS = {
   onFacebookLoginResponse: (response: FacebookLoginResponse) => {
     console.debug("[FacebookSdk] Default response", response);
   },
-
-  onSdkLoaded: () => {
-    console.debug("[FacebookSdk] SDK loaded");
-  },
 };
 
 const FB_SCRIPT_ID = "facebook-jssdk";
@@ -91,8 +87,8 @@ const FB_SCRIPT_ID = "facebook-jssdk";
 export const startFacebookSdk = (props: IFacebookSdkProps): Promise<void> => {
   return new Promise((resolve) => {
     const onSdkLoaded = () => {
-      props.onSdkLoaded?.();
       resolve();
+      props.onSdkLoaded?.();
     };
 
     const propsWithDefaults: Required<IFacebookSdkProps> = {
@@ -110,13 +106,13 @@ export const startFacebookSdk = (props: IFacebookSdkProps): Promise<void> => {
     }
     console.debug(`[FacebookSdk] ${FB_SCRIPT_ID} doesn't yet exist`);
     setFbAsyncInit(propsWithDefaults);
-    loadSdkAsynchronously(propsWithDefaults);
     let fbRoot = document.getElementById("fb-root");
     if (!fbRoot) {
       fbRoot = document.createElement("div");
       fbRoot.id = "fb-root";
       document.body.appendChild(fbRoot);
     }
+    loadSdkAsynchronously(propsWithDefaults);
   });
 };
 
@@ -149,7 +145,9 @@ const setIsSdkLoaded = (props: Required<IFacebookSdkProps>) => {
 };
 
 const setFbAsyncInit = (props: Required<IFacebookSdkProps>) => {
+  console.debug("[FacebookSdk] setFbAsyncInit");
   getFacebookWindow().fbAsyncInit = () => {
+    console.debug("[FacebookSdk] fbAsyncInit triggered");
     const {
       appId,
       version,
@@ -166,6 +164,7 @@ const setFbAsyncInit = (props: Required<IFacebookSdkProps>) => {
       xfbml,
       frictionlessRequests,
     });
+    console.debug("[FacebookSdk] FB.init finished");
     setIsSdkLoaded(props);
   };
 };
