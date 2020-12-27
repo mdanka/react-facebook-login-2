@@ -1,5 +1,5 @@
 {
-  "name": "react-facebook-login-2",
+  "name": "react-facebook-login-button",
   "version": "1.0.0",
   "main": "./build/index.js",
   "module": "./build/index.es.js",
