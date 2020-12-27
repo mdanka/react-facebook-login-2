@@ -1,4 +1,6 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
+
+export type FacebookLoginResponse = Record<string, unknown>;
 
 export interface IFacebookLoginButtonProps {
   // General options
@@ -12,7 +14,7 @@ export interface IFacebookLoginButtonProps {
   /**
    * The properties returned by the Facebook login callback.
    */
-  onFacebookLoginResponse: (response: Record<string, unknown>) => void;
+  onFacebookLoginResponse?: (response: FacebookLoginResponse) => void;
 
   // Facebook options
 
@@ -121,15 +123,181 @@ const DEFAULT_PROPS = {
 
   autoLogoutLink: false,
   scope: "public_profile",
-  size: "small",
-  defaultAudience: "friends",
-  layout: "default",
-  buttonType: "continue_with",
+  size: "small" as const,
+  defaultAudience: "friends" as const,
+  layout: "default" as const,
+  buttonType: "continue_with" as const,
   useContinueAs: false,
 
   className: "fb-login-button",
+  onFacebookLoginResponse: (response: FacebookLoginResponse) => {
+    console.debug("[FacebookLoginResponse] Default response", response);
+  },
 };
 
-export const FacebookLoginButton: React.FC = () => {
-  return <div>Hello World</div>;
+export const FacebookLoginButton: React.FC<IFacebookLoginButtonProps> = (
+  props,
+) => {
+  const [isSdkLoaded, setIsSdkLoadedState] = useState(false);
+
+  const propsWithDefaults: Required<IFacebookLoginButtonProps> = {
+    ...DEFAULT_PROPS,
+    ...props,
+  };
+
+  const {
+    autoLogoutLink,
+    scope,
+    size,
+    defaultAudience,
+    layout,
+    buttonType,
+    useContinueAs,
+    className,
+    language,
+    onFacebookLoginResponse,
+    appId,
+    version,
+    cookie,
+    status,
+    xfbml,
+    frictionlessRequests,
+  } = propsWithDefaults;
+
+  let authStatusChangeSubscription:
+    | ((response: FacebookLoginResponse) => void)
+    | undefined;
+  let authResponseChangeSubscription:
+    | ((response: FacebookLoginResponse) => void)
+    | undefined;
+
+  const getFacebookWindow = () => {
+    return (window as unknown) as {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      FB: any;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fbAsyncInit: any;
+    };
+  };
+
+  useEffect(() => {
+    console.debug("[FacebookLoginButton] componentDidMount");
+    if (document.getElementById("facebook-jssdk")) {
+      console.debug("[FacebookLoginButton] facebook-jssdk already exists");
+      setIsSdkLoaded();
+      refreshLoginStatus();
+      return;
+    }
+    console.debug("[FacebookLoginButton] facebook-jssdk doesn't yet exist");
+    setFbAsyncInit();
+    loadSdkAsynchronously();
+    let fbRoot = document.getElementById("fb-root");
+    if (!fbRoot) {
+      fbRoot = document.createElement("div");
+      fbRoot.id = "fb-root";
+      document.body.appendChild(fbRoot);
+    }
+
+    return () => {
+      console.debug("[FacebookLoginButton] componentWillUnmount");
+      if (authStatusChangeSubscription != null) {
+        getFacebookWindow().FB.Event.unsubscribe(
+          "auth.statusChange",
+          authStatusChangeSubscription,
+        );
+        authStatusChangeSubscription = null;
+      }
+      if (authResponseChangeSubscription != null) {
+        getFacebookWindow().FB.Event.unsubscribe(
+          "auth.authResponseChange",
+          authResponseChangeSubscription,
+        );
+        authResponseChangeSubscription = null;
+      }
+      console.debug("[FacebookLoginButton] Unsubscribed change listeners");
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isSdkLoaded) {
+      console.debug("[FacebookLoginButton] The SDK has just loaded");
+      if (!status) {
+        // The status is not automatically loaded, so we have to load it
+        refreshLoginStatus();
+      }
+      // We have to ask the Facebook SDK to rerender the button if
+      // some properties changed
+      getFacebookWindow().FB.XFBML.parse();
+    }
+  }, [isSdkLoaded]);
+
+  const setIsSdkLoaded = useCallback(() => {
+    console.debug("[FacebookLoginButton] setIsSdkLoaded");
+    setIsSdkLoadedState(true);
+    authStatusChangeSubscription = function (response) {
+      onFacebookLoginResponse(response);
+    };
+    authResponseChangeSubscription = function (response) {
+      onFacebookLoginResponse(response);
+    };
+    getFacebookWindow().FB.Event.subscribe(
+      "auth.statusChange",
+      authStatusChangeSubscription,
+    );
+    getFacebookWindow().FB.Event.subscribe(
+      "auth.authResponseChange",
+      authResponseChangeSubscription,
+    );
+    console.debug("[FacebookLoginButton] Subscribed change listeners");
+  }, [setIsSdkLoadedState, onFacebookLoginResponse]);
+
+  const setFbAsyncInit = useCallback(() => {
+    getFacebookWindow().fbAsyncInit = () => {
+      getFacebookWindow().FB.init({
+        appId,
+        version,
+        cookie,
+        status,
+        xfbml,
+        frictionlessRequests,
+      });
+      setIsSdkLoaded();
+    };
+  }, [appId, version, cookie, status, xfbml, frictionlessRequests]);
+
+  const loadSdkAsynchronously = useCallback(() => {
+    ((d, s, id) => {
+      const element = d.getElementsByTagName(s)[0];
+      const fjs = element;
+      let js = element;
+      if (d.getElementById(id)) {
+        return;
+      }
+      js = d.createElement(s);
+      js.id = id;
+      (js as HTMLScriptElement).src = `https://connect.facebook.net/${language}/sdk.js`;
+      fjs.parentNode.insertBefore(js, fjs);
+    })(document, "script", "facebook-jssdk");
+  }, [language]);
+
+  const refreshLoginStatus = useCallback(() => {
+    console.debug("[FacebookLoginButton] refreshLoginStatus");
+    getFacebookWindow().FB.getLoginStatus(function (response) {
+      onFacebookLoginResponse(response);
+    });
+  }, [onFacebookLoginResponse]);
+
+  return (
+    <div
+      className={className}
+      data-auto-logout-link={autoLogoutLink}
+      data-scope={scope}
+      data-size={size}
+      data-default-audience={defaultAudience}
+      data-button-type={buttonType}
+      data-layout={layout}
+      data-use-continue-as={useContinueAs}
+      data-width=""
+    />
+  );
 };

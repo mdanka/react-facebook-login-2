@@ -6,4 +6,17 @@ export default {
   component: FacebookLoginButton,
 };
 
-export const Default = (): React.ReactNode => <FacebookLoginButton />;
+export const Default = (): React.ReactNode => (
+  <FacebookLoginButton
+    appId="168590974451254"
+    version="v8.0"
+    cookie={true}
+    status={true}
+    xfbml={true}
+    autoLogoutLink={false}
+    scope="public_profile"
+    size="medium"
+    buttonType="login_with"
+    useContinueAs={true}
+  />
+);
